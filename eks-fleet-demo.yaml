@@ -1,0 +1,20 @@
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
+metadata:
+  labels:
+    fleet.cattle.io/created-by-user-id: user-xtskb
+  name: eks-fleet-demo
+  namespace: fleet-default
+spec:
+  branch: master
+  correctDrift:
+    enabled: true
+  forceSyncGeneration: 2
+  paths:
+    - simple-app
+  pollingInterval: 1m0s
+  repo: https://github.com/doccaz/fleet-examples
+  targets:
+    - clusterSelector:
+        matchLabels:
+          cluster.x-k8s.io/cluster-name: my-eks-test

@@ -1,0 +1,12 @@
+apiVersion: fleet.cattle.io/v1alpha1
+kind: ClusterGroup
+metadata:
+  annotations:
+    field.cattle.io/description: Test clusters in EKS
+  name: eks-test-group
+  namespace: fleet-default
+spec:
+  selector:
+    matchExpressions: []
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: my-eks-test

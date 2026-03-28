@@ -1,0 +1,16 @@
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
+metadata:
+  name: sample-app
+  # Deploy this in the same namespace where your cluster is registered in Fleet
+  namespace: fleet-default 
+spec:
+  # The HTTP/HTTPS/SSH URL of your git repo
+  repo: https://github.com/rancher/fleet-examples
+  paths:
+    - simple-app
+  branch: master
+  # Target the cluster group we created earlier
+  targets:
+    - clusterGroup: eks-test-group
+

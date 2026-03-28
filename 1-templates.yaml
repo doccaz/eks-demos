@@ -1,0 +1,61 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSManagedClusterTemplate
+metadata:
+  name: my-eks-test-cluster-v1
+  namespace: default
+spec:
+  template:
+    spec: {}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: AWSManagedControlPlaneTemplate
+metadata:
+  name: my-eks-test-control-plane-v4
+  namespace: default
+spec:
+  template:
+    spec:
+      region: us-east-1
+      version: v1.31.0
+      associateOIDCProvider: true 
+      roleAdditionalPolicies:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::058264532137:policy/EKS-Rancher
+      # automatic role creation
+      iamAuthenticatorConfig:
+          mapRoles: []
+      endpointAccess:
+        public: true
+        private: true
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: my-eks-test-node-group-v2
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.medium
+      sshKeyName: default-key
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: my-eks-test-node-group-xlarge-v1
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.xlarge
+      sshKeyName: default-key
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: EKSConfigTemplate
+metadata:
+  name: my-eks-test-bootstrap-v1
+  namespace: default
+spec:
+  template: {}
