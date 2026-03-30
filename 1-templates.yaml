@@ -17,7 +17,7 @@ spec:
     spec:
       region: us-east-1
       version: v1.31.0
-      associateOIDCProvider: true 
+      associateOIDCProvider: false
       roleAdditionalPolicies:
         - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
         - arn:aws:iam::058264532137:policy/EKS-Rancher
