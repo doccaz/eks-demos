@@ -14,7 +14,7 @@ spec:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: AWSManagedControlPlaneTemplate
-      name: my-eks-test-control-plane-v4
+      name: my-eks-test-control-plane-v5
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
@@ -33,4 +33,10 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: my-eks-test-node-group-v2
+              name: my-eks-test-node-group-medium-v1
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+
