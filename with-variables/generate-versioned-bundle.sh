@@ -8,6 +8,8 @@ FIXED_BOOTSTRAP="bootstrap-fixed"
 
 USER_ARN="arn:aws:iam::058264532137:user/emendonca-remote"
 NODE_ROLE_ARN="arn:aws:iam::058264532137:role/nodes.cluster-api-provider-aws.sigs.k8s.io"
+EKS_CLUSTER_POLICY="arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+EKS_RANCHER_POLICY="arn:aws:iam::058264532137:policy/EKS-Rancher"
 
 echo "------------------------------------------------"
 echo "EKS Bundle Generator (Ready for 1.33)"
@@ -40,6 +42,7 @@ V_SUF="${selected_version//./-}"
 OUTPUT_FILE="eks-bundle-v$V_SUF.yaml"
 
 cat <<EOF > $OUTPUT_FILE
+# --- VERSIONED CONTROL PLANE ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: AWSManagedControlPlaneTemplate
 metadata:
@@ -51,6 +54,14 @@ spec:
       version: $K8S_V
       region: us-east-1
       sshKeyName: default-key
+      associateOIDCProvider: false
+      roleAdditionalPolicies:
+        - $EKS_CLUSTER_POLICY
+        - $EKS_RANCHER_POLICY
+      endpointAccess:
+        public: true
+        private: true
+      # This configuration populates the aws-auth ConfigMap
       iamAuthenticatorConfig:
         mapRoles:
           - rolearn: "$NODE_ROLE_ARN"
@@ -71,6 +82,7 @@ EOF
 generate_class() {
   local size=$1
   cat <<EOF >> $OUTPUT_FILE
+# --- SIZE: ${size^^} ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
@@ -108,4 +120,3 @@ EOF
 generate_class "medium"
 generate_class "large"
 generate_class "xlarge"
-

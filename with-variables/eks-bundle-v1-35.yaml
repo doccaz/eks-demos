@@ -10,19 +10,26 @@ spec:
       version: v1.35.0
       region: us-east-1
       sshKeyName: default-key
+      associateOIDCProvider: false
+      roleAdditionalPolicies:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::058264532137:policy/EKS-Rancher
+      endpointAccess:
+        public: true
+        private: true
       # This configuration populates the aws-auth ConfigMap
       iamAuthenticatorConfig:
         mapRoles:
           - rolearn: "arn:aws:iam::058264532137:role/nodes.cluster-api-provider-aws.sigs.k8s.io"
             username: "system:node:{{EC2PrivateDNSName}}"
             groups:
-              - "system:bootstrappers"
-              - "system:nodes"
+              - system:bootstrappers
+              - system:nodes
         mapUsers:
           - userarn: "arn:aws:iam::058264532137:user/emendonca-remote"
-            username: "admin"
+            username: admin
             groups:
-              - "system:masters"
+              - system:masters
       addons:
         - name: aws-ebs-csi-driver
           version: v1.57.1-eksbuild.1
