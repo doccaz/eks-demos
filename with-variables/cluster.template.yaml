@@ -1,0 +1,24 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: my-eks-test
+  namespace: default
+spec:
+  topology:
+    class: my-eks-test-class-v2
+    version: ${K8S_VERSION}
+    variables:
+      - name: vpc_cni_version
+        value: "${VPC_CNI_VERSION}"
+      - name: coredns_version
+        value: "${COREDNS_VERSION}"
+      - name: kube_proxy_version
+        value: "${KUBE_PROXY_VERSION}"
+      - name: ebs_csi_version
+        value: "${AWS_EBS_CSI_DRIVER_VERSION}"
+    workers:
+      machineDeployments:
+        - class: default-worker
+          name: md-0
+          replicas: 3
+

@@ -1,0 +1,11 @@
+resources:
+  - ../../base # Points to the directory containing your generated 3-cluster.yaml
+patches:
+  - target:
+      kind: Cluster
+      name: my-eks-test
+    patch: |-
+      - op: replace
+        path: /spec/topology/workers/machineDeployments/0/replicas
+        value: 5
+

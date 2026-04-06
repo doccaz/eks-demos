@@ -1,0 +1,62 @@
+# fixed-infra.yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSManagedClusterTemplate
+metadata:
+  name: cluster-fixed
+  namespace: default
+spec:
+  template:
+    spec: {}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: EKSConfigTemplate
+metadata:
+  name: bootstrap-fixed
+  namespace: default
+spec:
+  template:
+    spec: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-medium
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.medium
+      sshKeyName: default-key
+      ami:
+        # Official EKS-optimized AL2023 AMI for 1.33 (us-east-1)
+        id: ami-0968813e33bc4ebc2 
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-large
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.large
+      sshKeyName: default-key
+      ami:
+        id: ami-0968813e33bc4ebc2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-xlarge
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.xlarge
+      sshKeyName: default-key
+      ami:
+        id: ami-0968813e33bc4ebc2
+

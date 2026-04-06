@@ -1,0 +1,88 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSManagedClusterTemplate
+metadata:
+  name: my-eks-test-cluster-v1
+  namespace: default
+spec:
+  template:
+    spec: {}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: AWSManagedControlPlaneTemplate
+metadata:
+  name: my-eks-test-control-plane-v5
+  namespace: default
+spec:
+  template:
+    spec:
+      eksClusterName: my-eks-test
+      region: us-east-1
+      # You can get a list of currently supported K8s versions with:
+      # aws eks describe-cluster-versions --query 'clusterVersions[?status==`STANDARD_SUPPORT`]'
+      #
+      # If you need just an array of versions:
+      # aws eks describe-cluster-versions --query 'clusterVersions[?status==`STANDARD_SUPPORT`].clusterVersion'
+      # (note that the results need a "v<VERSION>.0" to be considered valid
+      version: v1.31.0
+      associateOIDCProvider: false
+      roleAdditionalPolicies:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::058264532137:policy/EKS-Rancher
+      # automatic role creation
+      iamAuthenticatorConfig:
+          mapRoles: []
+      endpointAccess:
+        public: true
+        private: true
+      addons:
+        # EKS requires versions for the addons (unfortunately)
+        # You can get the supported versions with:
+        # aws eks describe-addon-versions     --kubernetes-version <K8S VERSION> --query 'addons[]' 
+        #
+        # or if you just want the supported versions for one specific addon:
+        #  aws eks describe-addon-versions     --kubernetes-version <K8S VERSION> --addon-name <ADDON-NAME>r --query 'addons[].addonVersions[].addonVersion'
+        #
+        - name: aws-ebs-csi-driver
+          version: 'v1.57.1-eksbuild.1'
+          conflictResolution: overwrite
+        - name: coredns
+          version: 'v1.11.4-eksbuild.33'
+          conflictResolution: overwrite
+        - name: kube-proxy
+          version: 'v1.31.14-eksbuild.6'
+          conflictResolution: overwrite
+        - name: vpc-cni
+          version: 'v1.21.1-eksbuild.5'
+          conflictResolution: overwrite
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: my-eks-test-node-group-medium-v1
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.medium
+      sshKeyName: default-key
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: my-eks-test-node-group-xlarge-v1
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.xlarge
+      sshKeyName: default-key
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: EKSConfigTemplate
+metadata:
+  name: my-eks-test-bootstrap-v1
+  namespace: default
+spec:
+  template: {}

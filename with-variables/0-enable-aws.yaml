@@ -1,0 +1,63 @@
+apiVersion: turtles-capi.cattle.io/v1alpha1
+kind: CAPIProvider
+metadata:
+  name: aws-control-plane
+  namespace: capi-providers
+spec:
+  name: aws
+  type: controlPlane
+  version: v2.9.1
+  # CRITICAL: Point to your Rancher Cloud Credential here too!
+  credentials:
+    rancherCloudCredential: aws-creds
+  fetchConfig:
+    url: https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v2.9.1/infrastructure-components.yaml
+---
+apiVersion: turtles-capi.cattle.io/v1alpha1
+kind: CAPIProvider
+metadata:
+  name: aws-bootstrap
+  namespace: capi-providers
+spec:
+  name: aws
+  type: bootstrap
+  version: v2.9.1
+  # CRITICAL: And here!
+  credentials:
+    rancherCloudCredential: aws-creds
+  fetchConfig:
+    url: https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v2.9.1/infrastructure-components.yaml
+---
+
+apiVersion: turtles-capi.cattle.io/v1alpha1
+kind: CAPIProvider
+metadata:
+  name: aws-infra
+  namespace: capi-providers
+spec:
+  name: aws
+  type: infrastructure
+  version: v2.9.1
+  fetchConfig:
+    url: >-
+      https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v2.9.1/infrastructure-components.yaml
+  variables:
+    EXP_EKS: 'true'
+    CAPA_EKS_IAM: 'true'
+    EXP_MACHINE_POOL: 'true'
+  credentials:
+    rancherCloudCredential: aws-creds
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: capa-manager-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: capa-controller-manager
+    namespace: capi-providers
+
