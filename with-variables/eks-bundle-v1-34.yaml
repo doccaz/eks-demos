@@ -11,9 +11,6 @@ spec:
       region: us-east-1
       sshKeyName: default-key
       associateOIDCProvider: false
-      roleAdditionalPolicies:
-        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
-        - arn:aws:iam::058264532137:policy/EKS-Rancher
       endpointAccess:
         public: true
         private: true
@@ -32,7 +29,7 @@ spec:
               - system:masters
       addons:
         - name: aws-ebs-csi-driver
-          version: v1.57.1-eksbuild.1
+          version: v1.58.0-eksbuild.1
           conflictResolution: overwrite
         - name: coredns
           version: v1.12.3-eksbuild.1
@@ -44,7 +41,52 @@ spec:
           version: v1.20.4-eksbuild.2
           conflictResolution: overwrite
 ---
-# --- SIZE: MEDIUM ---
+# --- MACHINE TEMPLATE: MEDIUM (v1-34) ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-v1-34-medium
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.medium
+      sshKeyName: default-key
+      ami:
+        id: ami-00b16894e17387eb9
+---
+# --- MACHINE TEMPLATE: LARGE (v1-34) ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-v1-34-large
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.large
+      sshKeyName: default-key
+      ami:
+        id: ami-00b16894e17387eb9
+---
+# --- MACHINE TEMPLATE: XLARGE (v1-34) ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-v1-34-xlarge
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: t3.xlarge
+      sshKeyName: default-key
+      ami:
+        id: ami-00b16894e17387eb9
+---
+# --- CLUSTER CLASS: MEDIUM (v1-34) ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
@@ -74,9 +116,9 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: worker-medium
+              name: worker-v1-34-medium
 ---
-# --- SIZE: LARGE ---
+# --- CLUSTER CLASS: LARGE (v1-34) ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
@@ -106,9 +148,9 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: worker-large
+              name: worker-v1-34-large
 ---
-# --- SIZE: XLARGE ---
+# --- CLUSTER CLASS: XLARGE (v1-34) ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
@@ -138,5 +180,5 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: worker-xlarge
+              name: worker-v1-34-xlarge
 ---

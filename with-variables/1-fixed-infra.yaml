@@ -1,4 +1,5 @@
 # fixed-infra.yaml
+# Version-agnostic shared templates. Machine templates are now in the versioned bundles.
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: AWSManagedClusterTemplate
 metadata:
@@ -16,40 +17,3 @@ metadata:
 spec:
   template:
     spec: {}
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: AWSMachineTemplate
-metadata:
-  name: worker-medium
-  namespace: default
-spec:
-  template:
-    spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: t3.medium
-      sshKeyName: default-key
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: AWSMachineTemplate
-metadata:
-  name: worker-large
-  namespace: default
-spec:
-  template:
-    spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: t3.large
-      sshKeyName: default-key
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: AWSMachineTemplate
-metadata:
-  name: worker-xlarge
-  namespace: default
-spec:
-  template:
-    spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: t3.xlarge
-      sshKeyName: default-key
-

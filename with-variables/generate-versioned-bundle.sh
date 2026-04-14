@@ -2,17 +2,16 @@
 # generate-versioned-bundle.sh
 
 AWS_PROFILE="turtles"
+AWS_REGION="us-east-1"
 WANTED_ADDONS="aws-ebs-csi-driver coredns kube-proxy vpc-cni"
 FIXED_CLUSTER_INFRA="cluster-fixed"
 FIXED_BOOTSTRAP="bootstrap-fixed"
 
 USER_ARN="arn:aws:iam::058264532137:user/emendonca-remote"
 NODE_ROLE_ARN="arn:aws:iam::058264532137:role/nodes.cluster-api-provider-aws.sigs.k8s.io"
-EKS_CLUSTER_POLICY="arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-EKS_RANCHER_POLICY="arn:aws:iam::058264532137:policy/EKS-Rancher"
 
 echo "------------------------------------------------"
-echo "EKS Bundle Generator (Ready for 1.33)"
+echo "EKS Versioned Bundle Generator"
 echo "------------------------------------------------"
 
 # 1. Fetch K8s Versions
@@ -37,7 +36,24 @@ addon_json=$(echo "$raw_json" | jq -c '[.[] | {
     version: (.versions[] | select(.compatibilities[] | .defaultVersion == true or .defaultVersion == "true") | .addonVersion) // .versions[0].addonVersion
 }]')
 
-# 4. Generate Output
+# 4. Fetch AL2023 AMI ID
+# CAPA v2.9.1 has a bug where AMI auto-discovery always looks for AL2, which
+# doesn't exist for EKS >= 1.33. We must look up the AL2023 AMI and hardcode it.
+echo "Looking up EKS-optimized AL2023 AMI for v${selected_version} in ${AWS_REGION}..."
+AMI_ID=$(aws ssm get-parameter \
+    --name "/aws/service/eks/optimized-ami/${selected_version}/amazon-linux-2023/x86_64/standard/recommended/image_id" \
+    --region "$AWS_REGION" \
+    --query "Parameter.Value" \
+    --output text \
+    --profile $AWS_PROFILE)
+
+if [ -z "$AMI_ID" ] || [ "$AMI_ID" = "None" ]; then
+    echo "ERROR: Could not find AL2023 AMI for EKS ${selected_version} in ${AWS_REGION}"
+    exit 1
+fi
+echo "  Found AMI: $AMI_ID"
+
+# 5. Generate Output
 V_SUF="${selected_version//./-}"
 OUTPUT_FILE="eks-bundle-v$V_SUF.yaml"
 
@@ -52,12 +68,9 @@ spec:
   template:
     spec:
       version: $K8S_V
-      region: us-east-1
+      region: $AWS_REGION
       sshKeyName: default-key
       associateOIDCProvider: false
-      roleAdditionalPolicies:
-        - $EKS_CLUSTER_POLICY
-        - $EKS_RANCHER_POLICY
       endpointAccess:
         public: true
         private: true
@@ -79,10 +92,40 @@ $(echo "$addon_json" | jq -r '.[] | "        - name: \(.name)\n          version
 ---
 EOF
 
+# 6. Generate version-specific machine templates
+# CAPA bug: AMI auto-discovery uses AL2 SSM path which doesn't exist for EKS >= 1.33.
+# We hardcode the AL2023 AMI per version. These templates are version-specific.
+generate_machine_template() {
+  local size=$1
+  local instance_type=$2
+  cat <<EOF >> $OUTPUT_FILE
+# --- MACHINE TEMPLATE: ${size^^} (v$V_SUF) ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: worker-v$V_SUF-$size
+  namespace: default
+spec:
+  template:
+    spec:
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: $instance_type
+      sshKeyName: default-key
+      ami:
+        id: $AMI_ID
+---
+EOF
+}
+
+generate_machine_template "medium" "t3.medium"
+generate_machine_template "large" "t3.large"
+generate_machine_template "xlarge" "t3.xlarge"
+
+# 7. Generate ClusterClasses referencing version-specific machine templates
 generate_class() {
   local size=$1
   cat <<EOF >> $OUTPUT_FILE
-# --- SIZE: ${size^^} ---
+# --- CLUSTER CLASS: ${size^^} (v$V_SUF) ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
@@ -112,7 +155,7 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: worker-$size
+              name: worker-v$V_SUF-$size
 ---
 EOF
 }
@@ -120,3 +163,10 @@ EOF
 generate_class "medium"
 generate_class "large"
 generate_class "xlarge"
+
+echo "------------------------------------------------"
+echo "SUCCESS: $OUTPUT_FILE generated"
+echo "  K8s version: $K8S_V"
+echo "  AL2023 AMI:  $AMI_ID"
+echo "  ClusterClasses: eks-v$V_SUF-{medium,large,xlarge}"
+echo "------------------------------------------------"
