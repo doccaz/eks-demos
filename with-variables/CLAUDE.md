@@ -123,10 +123,15 @@ spec:
 
 ### generate-versioned-bundle.sh — Bundle Generator
 
-Queries AWS for available EKS versions and default addon versions. Generates a complete versioned bundle.
+Queries AWS for available EKS versions (both `STANDARD_SUPPORT` and `EXTENDED_SUPPORT`) and auto-discovers default addon versions. Generates a complete versioned bundle.
 
+- Lists all supported and extended-support EKS versions in the interactive menu.
+- Auto-discovers default addon versions for `aws-ebs-csi-driver`, `coredns`, `kube-proxy`, and `vpc-cni` via `aws eks describe-addon-versions`.
+- Validates that all four required addons were found before generating the bundle.
 - Warns if selected version >= 1.33 (unsupported with current toolchain).
 - Requires: `aws` CLI configured with profile `turtles`, and `jq`.
+
+**JMESPath gotcha:** When querying `defaultVersion` in the AWS CLI, you must use backtick-quoted `` `true` `` (e.g., ``defaultVersion==`true` ``). Using bare `true` without backticks returns null results because the AWS API returns the boolean as a string in some contexts.
 
 ## Deployment Order
 
@@ -291,3 +296,6 @@ aws iam delete-role --role-name workload-cluster-01-iam-service-role --profile t
 10. **All three CAPIProvider objects** need `credentials.rancherCloudCredential` and matching version/URL.
 11. **The Turtles operator pins the infra provider version** — you cannot upgrade CAPA independently.
 12. **AL2023 uses `nodeadm`**, not `bootstrap.sh`. CAPA v2.9.x only generates `bootstrap.sh` userdata via `EKSConfigTemplate`. The `NodeadmConfigTemplate` CRD is needed for AL2023 but is not available in v2.9.x.
+13. **JMESPath boolean comparison** in AWS CLI requires backtick-quoted values (`` `true` ``). Using bare `true` silently returns null. This affects addon version discovery queries.
+14. **The `fill-versions.sh`, `upgrade-cluster.sh`, `cluster.template.yaml`, and `3-cluster.yaml` files are legacy** — they were from an earlier approach using `envsubst` and ClusterClass variables. The current approach uses `generate-versioned-bundle.sh` which replaces all of them.
+15. **EKS versions in extended support** (e.g., 1.31, 1.32) are still valid targets for CAPA. The generator script queries both `STANDARD_SUPPORT` and `EXTENDED_SUPPORT` versions to include them in the menu.
