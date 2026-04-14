@@ -5,12 +5,12 @@ metadata:
   namespace: default
 spec:
   topology:
-    # Select size (medium/large/xlarge) and version (v1-33/v1-34) here
-    class: eks-v1-33-large 
-    version: v1.33.0
+    # Upgrade workflow: change class and version together
+    # Available: eks-v1-31-{medium,large,xlarge}, eks-v1-32-{medium,large,xlarge}
+    class: eks-v1-31-large
+    version: v1.31.0
     workers:
       machineDeployments:
         - class: default-worker
           name: md-0
           replicas: 3
-

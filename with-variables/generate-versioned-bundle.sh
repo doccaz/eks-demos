@@ -1,5 +1,9 @@
 #!/bin/bash
 # generate-versioned-bundle.sh
+#
+# Generates a versioned EKS bundle for use with CAPI + Rancher Turtles.
+# Currently supports EKS <= 1.32 (AL2 AMIs). EKS >= 1.33 requires
+# NodeadmConfigTemplate which is not yet available in CAPA v2.9.x / Turtles v0.25.x.
 
 AWS_PROFILE="turtles"
 AWS_REGION="us-east-1"
@@ -12,12 +16,26 @@ NODE_ROLE_ARN="arn:aws:iam::058264532137:role/nodes.cluster-api-provider-aws.sig
 
 echo "------------------------------------------------"
 echo "EKS Versioned Bundle Generator"
+echo "NOTE: Only EKS <= 1.32 is supported with current"
+echo "      CAPA v2.9.x (AL2 bootstrap via EKSConfig)."
+echo "      EKS >= 1.33 requires NodeadmConfigTemplate."
 echo "------------------------------------------------"
 
 # 1. Fetch K8s Versions
 versions=( $(aws eks describe-cluster-versions --query 'clusterVersions[?status==`STANDARD_SUPPORT`].clusterVersion' --output text --profile $AWS_PROFILE) )
 PS3="Select EKS version: "
 select selected_version in "${versions[@]}"; do [ -n "$selected_version" ] && break; done
+
+# Warn if >= 1.33
+major_minor=$(echo "$selected_version" | cut -d. -f1-2)
+if awk "BEGIN {exit !($major_minor >= 1.33)}"; then
+    echo ""
+    echo "WARNING: EKS $selected_version requires AL2023 AMIs and NodeadmConfigTemplate,"
+    echo "which is NOT supported by CAPA v2.9.x / Turtles v0.25.x."
+    echo "Nodes will NOT join the cluster with the current setup."
+    read -p "Continue anyway? (y/N): " confirm
+    [ "$confirm" != "y" ] && exit 1
+fi
 
 # 2. Build Filter Query
 FILTER_QUERY=""
@@ -36,24 +54,7 @@ addon_json=$(echo "$raw_json" | jq -c '[.[] | {
     version: (.versions[] | select(.compatibilities[] | .defaultVersion == true or .defaultVersion == "true") | .addonVersion) // .versions[0].addonVersion
 }]')
 
-# 4. Fetch AL2023 AMI ID
-# CAPA v2.9.1 has a bug where AMI auto-discovery always looks for AL2, which
-# doesn't exist for EKS >= 1.33. We must look up the AL2023 AMI and hardcode it.
-echo "Looking up EKS-optimized AL2023 AMI for v${selected_version} in ${AWS_REGION}..."
-AMI_ID=$(aws ssm get-parameter \
-    --name "/aws/service/eks/optimized-ami/${selected_version}/amazon-linux-2023/x86_64/standard/recommended/image_id" \
-    --region "$AWS_REGION" \
-    --query "Parameter.Value" \
-    --output text \
-    --profile $AWS_PROFILE)
-
-if [ -z "$AMI_ID" ] || [ "$AMI_ID" = "None" ]; then
-    echo "ERROR: Could not find AL2023 AMI for EKS ${selected_version} in ${AWS_REGION}"
-    exit 1
-fi
-echo "  Found AMI: $AMI_ID"
-
-# 5. Generate Output
+# 4. Generate Output
 V_SUF="${selected_version//./-}"
 OUTPUT_FILE="eks-bundle-v$V_SUF.yaml"
 
@@ -74,7 +75,6 @@ spec:
       endpointAccess:
         public: true
         private: true
-      # This configuration populates the aws-auth ConfigMap
       iamAuthenticatorConfig:
         mapRoles:
           - rolearn: "$NODE_ROLE_ARN"
@@ -92,36 +92,7 @@ $(echo "$addon_json" | jq -r '.[] | "        - name: \(.name)\n          version
 ---
 EOF
 
-# 6. Generate version-specific machine templates
-# CAPA bug: AMI auto-discovery uses AL2 SSM path which doesn't exist for EKS >= 1.33.
-# We hardcode the AL2023 AMI per version. These templates are version-specific.
-generate_machine_template() {
-  local size=$1
-  local instance_type=$2
-  cat <<EOF >> $OUTPUT_FILE
-# --- MACHINE TEMPLATE: ${size^^} (v$V_SUF) ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: AWSMachineTemplate
-metadata:
-  name: worker-v$V_SUF-$size
-  namespace: default
-spec:
-  template:
-    spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: $instance_type
-      sshKeyName: default-key
-      ami:
-        id: $AMI_ID
----
-EOF
-}
-
-generate_machine_template "medium" "t3.medium"
-generate_machine_template "large" "t3.large"
-generate_machine_template "xlarge" "t3.xlarge"
-
-# 7. Generate ClusterClasses referencing version-specific machine templates
+# 5. Generate ClusterClasses
 generate_class() {
   local size=$1
   cat <<EOF >> $OUTPUT_FILE
@@ -155,7 +126,7 @@ spec:
             ref:
               apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
               kind: AWSMachineTemplate
-              name: worker-v$V_SUF-$size
+              name: worker-$size
 ---
 EOF
 }
@@ -167,6 +138,5 @@ generate_class "xlarge"
 echo "------------------------------------------------"
 echo "SUCCESS: $OUTPUT_FILE generated"
 echo "  K8s version: $K8S_V"
-echo "  AL2023 AMI:  $AMI_ID"
 echo "  ClusterClasses: eks-v$V_SUF-{medium,large,xlarge}"
 echo "------------------------------------------------"

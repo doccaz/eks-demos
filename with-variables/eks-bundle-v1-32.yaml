@@ -1,0 +1,138 @@
+# --- VERSIONED CONTROL PLANE ---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: AWSManagedControlPlaneTemplate
+metadata:
+  name: eks-control-plane-v1-32
+  namespace: default
+spec:
+  template:
+    spec:
+      version: v1.32.0
+      region: us-east-1
+      sshKeyName: default-key
+      associateOIDCProvider: false
+      endpointAccess:
+        public: true
+        private: true
+      iamAuthenticatorConfig:
+        mapRoles:
+          - rolearn: "arn:aws:iam::058264532137:role/nodes.cluster-api-provider-aws.sigs.k8s.io"
+            username: "system:node:{{EC2PrivateDNSName}}"
+            groups:
+              - "system:bootstrappers"
+              - "system:nodes"
+        mapUsers:
+          - userarn: "arn:aws:iam::058264532137:user/emendonca-remote"
+            username: "admin"
+            groups:
+              - "system:masters"
+      addons:
+        - name: aws-ebs-csi-driver
+          version: v1.58.0-eksbuild.1
+          conflictResolution: overwrite
+        - name: coredns
+          version: v1.11.4-eksbuild.2
+          conflictResolution: overwrite
+        - name: kube-proxy
+          version: v1.32.6-eksbuild.12
+          conflictResolution: overwrite
+        - name: vpc-cni
+          version: v1.20.4-eksbuild.2
+          conflictResolution: overwrite
+---
+# --- CLUSTER CLASS: MEDIUM (v1-32) ---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: eks-v1-32-medium
+  namespace: default
+spec:
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedClusterTemplate
+      name: cluster-fixed
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedControlPlaneTemplate
+      name: eks-control-plane-v1-32
+  workers:
+    machineDeployments:
+      - class: default-worker
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+              kind: EKSConfigTemplate
+              name: bootstrap-fixed
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+              kind: AWSMachineTemplate
+              name: worker-medium
+---
+# --- CLUSTER CLASS: LARGE (v1-32) ---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: eks-v1-32-large
+  namespace: default
+spec:
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedClusterTemplate
+      name: cluster-fixed
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedControlPlaneTemplate
+      name: eks-control-plane-v1-32
+  workers:
+    machineDeployments:
+      - class: default-worker
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+              kind: EKSConfigTemplate
+              name: bootstrap-fixed
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+              kind: AWSMachineTemplate
+              name: worker-large
+---
+# --- CLUSTER CLASS: XLARGE (v1-32) ---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: eks-v1-32-xlarge
+  namespace: default
+spec:
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedClusterTemplate
+      name: cluster-fixed
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+      kind: AWSManagedControlPlaneTemplate
+      name: eks-control-plane-v1-32
+  workers:
+    machineDeployments:
+      - class: default-worker
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+              kind: EKSConfigTemplate
+              name: bootstrap-fixed
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+              kind: AWSMachineTemplate
+              name: worker-xlarge
+---
